@@ -1,0 +1,102 @@
+/* Reset de base pour la 3D en plein écran */
+body {
+    margin: 0;
+    overflow: hidden; /* Empêcher le scroll */
+    background-color: #050505; /* Fond très sombre mais pas totalement noir pour l'ambiance */
+    font-family: 'Inter', sans-serif;
+    color: #ffffff;
+}
+
+canvas {
+    display: block; /* Évite les marges fantômes du canvas */
+    width: 100vw;
+    height: 100vh;
+}
+
+/* --- Interface Utilisateur (Flottante par dessus la 3D) --- */
+#ui-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(20, 20, 20, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    width: 320px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+}
+
+#ui-container h1 {
+    margin: 0 0 20px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.badge {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: #a0a0a0;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+label {
+    font-size: 0.9rem;
+    color: #e0e0e0;
+}
+
+.color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+input[type="color"] {
+    -webkit-appearance: none;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    background: none;
+    padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+
+#color-hex-display {
+    font-family: monospace;
+    font-size: 0.95rem;
+    color: #ffffff;
+}
+
+.help-text {
+    margin: 6px 0 0 0;
+    font-size: 0.75rem;
+    color: #888;
+    line-height: 1.4;
+}
