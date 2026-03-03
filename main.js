@@ -91,20 +91,126 @@ scene.add(dirLight);
 // par défaut elle est à (0,0,0). La lumière la regarde toujours.
 scene.add(dirLight.target);
 
-// ─── 3. LE SOL (Z = -1.5) ───
-const wallMat = new THREE.MeshStandardMaterial({ 
-    color: 0x080808, // Gris très foncé (pour voir l'ombre dessus)
-    roughness: 1.0,  
-    metalness: 0.0
+// ─── 3. LE DÉCOR NATUREL (SOL, RUISSEAU, VÉGÉTATION) ───
+
+// A. Texture de Sol Naturel (Terre, Herbe, Cailloux)
+function createGroundTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    
+    // Terre de base
+    ctx.fillStyle = '#2E1E12'; 
+    ctx.fillRect(0, 0, 1024, 1024);
+    
+    // Herbe (bruit vert)
+    for(let i=0; i<80000; i++) {
+        ctx.fillStyle = Math.random() > 0.5 ? '#1E4620' : '#2d6a4f';
+        ctx.fillRect(Math.random()*1024, Math.random()*1024, 4, 4);
+    }
+    // Cailloux
+    for(let i=0; i<5000; i++) {
+        ctx.fillStyle = Math.random() > 0.5 ? '#555555' : '#888888';
+        ctx.fillRect(Math.random()*1024, Math.random()*1024, 2, 2);
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(20, 100);
+    return texture;
+}
+
+const groundMat = new THREE.MeshStandardMaterial({ 
+    map: createGroundTexture(),
+    roughness: 0.9,  
+    metalness: 0.05
 });
 
-// Le Sol (Perpendiculaire)
-const floorGeo = new THREE.PlaneGeometry(200, 1000); // Sol très long pour les 10 slides
-const floor = new THREE.Mesh(floorGeo, wallMat);
+const floorGeo = new THREE.PlaneGeometry(300, 1000); 
+const floor = new THREE.Mesh(floorGeo, groundMat);
 floor.rotation.x = -Math.PI / 2;
-floor.position.set(0, -4.0, -100); // On le décale vers le fond
+floor.position.set(0, -4.0, -200); 
 floor.receiveShadow = true;
 scene.add(floor);
+
+// B. Le Ruisseau Sinueux
+const streamGeo = new THREE.PlaneGeometry(12, 1000, 32, 100);
+const streamPos = streamGeo.attributes.position;
+// On ondule les vertices X en fonction de leur Y (qui deviendra Z après rotation)
+for(let i=0; i<streamPos.count; i++) {
+    const y = streamPos.getY(i); 
+    streamPos.setX(i, streamPos.getX(i) + Math.sin(y * 0.02) * 8.0);
+}
+streamGeo.computeVertexNormals();
+
+const streamMat = new THREE.MeshStandardMaterial({
+    color: 0x1A5276,
+    roughness: 0.1,
+    metalness: 0.8,
+    transparent: true,
+    opacity: 0.85,
+    envMapIntensity: 5.0 // Reflète le ciel fortement
+});
+const stream = new THREE.Mesh(streamGeo, streamMat);
+stream.rotation.x = -Math.PI / 2;
+stream.position.set(-25, -3.9, -200); // Placé à gauche et légèrement au-dessus du sol
+stream.receiveShadow = true;
+scene.add(stream);
+
+// C. Végétation (Arbres et Buissons Low-Poly)
+const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3E2723, roughness: 1.0 });
+const leavesMat1 = new THREE.MeshStandardMaterial({ color: 0x1B5E20, roughness: 0.9 }); // Vert foncé
+const leavesMat2 = new THREE.MeshStandardMaterial({ color: 0x2E7D32, roughness: 0.8 }); // Vert plus clair
+
+for (let i = 0; i < 400; i++) {
+    // Répartition sur 400 mètres derrière
+    const z = Math.random() * -400 + 20; 
+    
+    // On libère un large couloir central pour les slides et la caméra (de X=-16 à X=16)
+    const side = Math.random() > 0.5 ? 1 : -1;
+    const x = side * (16 + Math.random() * 60); 
+    
+    if (Math.random() > 0.6) {
+        // Sapin (Cylindre + Cône)
+        const trunkGeo = new THREE.CylinderGeometry(0.4, 0.6, 2);
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.set(x, -3.0, z);
+        trunk.castShadow = true;
+        trunk.receiveShadow = true;
+        
+        const leavesGeo = new THREE.ConeGeometry(2.5, 7, 5); // 5 faces = style Low Poly
+        const leaves = new THREE.Mesh(leavesGeo, Math.random() > 0.5 ? leavesMat1 : leavesMat2);
+        leaves.position.set(0, 4.5, 0);
+        leaves.castShadow = true;
+        leaves.receiveShadow = true;
+        
+        trunk.add(leaves);
+        scene.add(trunk);
+    } else {
+        // Buisson organique (Sphère déformée)
+        const bushGeo = new THREE.SphereGeometry(1.5 + Math.random() * 1.5, 7, 7);
+        const bush = new THREE.Mesh(bushGeo, leavesMat2);
+        
+        // Perturbation des sommets
+        const pos = bushGeo.attributes.position;
+        for(let j=0; j<pos.count; j++) {
+            pos.setXYZ(
+                j, 
+                pos.getX(j) * (0.8 + Math.random() * 0.4), 
+                pos.getY(j) * (0.8 + Math.random() * 0.4), 
+                pos.getZ(j) * (0.8 + Math.random() * 0.4)
+            );
+        }
+        bushGeo.computeVertexNormals();
+        
+        bush.position.set(x + (Math.random() * 6 - 3), -3.5, z);
+        bush.castShadow = true;
+        bush.receiveShadow = true;
+        scene.add(bush);
+    }
+}
 
 // ─── 4. LES MATÉRIAUX ───
 const textSolidMaterial = new THREE.MeshStandardMaterial({
@@ -235,6 +341,41 @@ loader.load('https://unpkg.com/three@0.162.0/examples/fonts/helvetiker_bold.type
         slides.push(hinge);
     }
 });
+
+// ─── 4.ter EFFETS SPÉCIAUX (PARTICULES DE FUMÉE) ───
+const smokeParticles = [];
+const smokeGeo = new THREE.SphereGeometry(1, 7, 7);
+const smokeMat = new THREE.MeshBasicMaterial({
+    color: 0x888888,
+    transparent: true,
+    opacity: 0.8,
+    depthWrite: false
+});
+
+function triggerSmoke(x, y, z) {
+    for (let i = 0; i < 15; i++) {
+        const p = new THREE.Mesh(smokeGeo, smokeMat.clone());
+        p.position.set(
+            x + (Math.random() - 0.5) * 4,
+            y + Math.random() * 2,
+            z + (Math.random() - 0.5) * 4
+        );
+        p.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+        
+        const scale = 1 + Math.random() * 2;
+        p.scale.set(scale, scale, scale);
+        
+        p.userData = {
+            velocityX: (Math.random() - 0.5) * 0.2,
+            velocityY: 0.1 + Math.random() * 0.2,
+            velocityZ: (Math.random() - 0.5) * 0.2,
+            life: 1.0
+        };
+        
+        scene.add(p);
+        smokeParticles.push(p);
+    }
+}
 
 // ─── 5. SYSTÈME DE TRANSITIONS VARIÉES ───
 let currentSlideIndex = 0;
@@ -445,7 +586,7 @@ function animate() {
             
             // Le mur saute en l'air
             const jumpEase = Math.sin(transitionProgress * Math.PI);
-            activeSlide.position.y = jumpEase * 12.0; 
+            activeSlide.position.y = -4.0 + jumpEase * 12.0; // Y base = -4.0
             
             // La caméra fonce tout droit (passe en dessous)
             camera.position.lerpVectors(startCamPos, targetCamPos, ease);
@@ -457,20 +598,49 @@ function animate() {
             }
         }
 
-        // --- TYPE 6 : CONTOURNEMENT PAR LA GAUCHE (Caméra libre) ---
+        // --- TYPE 6 : LE LANCER (ÉJECTION HAUTE ET VISIBLE) ---
         else if (transitionType === 6 && transitionDirection === 1) {
-            transitionProgress += 0.012; 
+            transitionProgress += 0.015; // Un peu plus rapide pour le dynamisme
             if (transitionProgress >= 1) transitionProgress = 1;
             
-            const ease = easeInOutCubic(transitionProgress);
-            const zPos = THREE.MathUtils.lerp(startCamPos.z, targetCamPos.z, ease);
-            const xOffset = -Math.sin(transitionProgress * Math.PI) * 15.0; // Demi-cercle gauche
-            const yOffset = startCamPos.y + Math.sin(transitionProgress * Math.PI) * 5.0; // S'élève un peu
+            // L'avancée linéaire du lancer
+            const throwEase = easeInOutCubic(transitionProgress); 
+            // La cloche de la parabole (0 au début, 1 au milieu, 0 à la fin)
+            const parabola = Math.sin(transitionProgress * Math.PI); 
             
-            camera.position.set(xOffset, yOffset, zPos);
-            currentLookAt.lerpVectors(startLookAt, targetLookAt, ease);
+            // Position de base de la charnière de cette slide
+            const baseZ = -(currentSlideIndex * slideSpacing) - 0.1;
+            
+            // Mouvement X : On l'envoie sur la droite, mais pas trop loin pour qu'il reste à l'écran (ex: 15 unités)
+            activeSlide.position.x = throwEase * 18.0; 
+            
+            // Mouvement Y : Il part du sol (-4.0), s'envole très haut (+25 unités), et retombe
+            activeSlide.position.y = -4.0 + (parabola * 25.0); 
+            
+            // Mouvement Z : Il recule pour atterrir à côté de la PROCHAINE slide
+            // La prochaine slide est à `baseZ - 20`. On le fait atterrir à `baseZ - 18` (juste un peu devant).
+            activeSlide.position.z = baseZ - (throwEase * 18.0);
+            
+            // Rotations folles
+            activeSlide.rotation.x = throwEase * Math.PI * 4; 
+            activeSlide.rotation.y = throwEase * Math.PI * 3;
+            activeSlide.rotation.z = throwEase * Math.PI * 1.5;
+
+            // Caméra avance pour aller voir la prochaine slide
+            const camEase = easeInOutCubic(transitionProgress);
+            camera.position.lerpVectors(startCamPos, targetCamPos, camEase);
+            currentLookAt.lerpVectors(startLookAt, targetLookAt, camEase);
             
             if (transitionProgress === 1) {
+                // Impact final
+                activeSlide.position.y = -4.0; // S'assure qu'il est parfaitement au sol
+                
+                shakeIntensity = 0.8; // Gros impact !
+                shakeTime = 30;
+                
+                // Déclencher la fumée aux coordonnées exactes de l'impact
+                triggerSmoke(activeSlide.position.x, -4.0, activeSlide.position.z);
+                
                 currentSlideIndex++;
                 isAnimating = false;
             }
@@ -478,35 +648,58 @@ function animate() {
         
         // --- TYPE 99 : REMBOBINAGE (RETOUR UNIVERSEL) ---
         else if (transitionType === 99 && transitionDirection === -1) {
-            transitionProgress += 0.03; // Retour très rapide
+            transitionProgress += 0.03; 
             if (transitionProgress >= 1) transitionProgress = 1;
             
             const ease = easeInOutCubic(transitionProgress);
             camera.position.lerpVectors(startCamPos, targetCamPos, ease);
             currentLookAt.lerpVectors(startLookAt, targetLookAt, ease);
             
-            // On restaure "magiquement" toutes les transformations du mur ciblé
             const targetSlide = slides[currentSlideIndex];
             
-            // On lerp toutes les propriétés modifiées par les transitions vers leur état initial (0)
+            // Base Z de la slide
+            const baseZ = -(currentSlideIndex * slideSpacing) - 0.1;
+
+            // Retour magique à la position 0 stricte
             targetSlide.rotation.x += (0 - targetSlide.rotation.x) * 0.15;
             targetSlide.rotation.y += (0 - targetSlide.rotation.y) * 0.15;
+            targetSlide.rotation.z += (0 - targetSlide.rotation.z) * 0.15;
             targetSlide.position.x += (0 - targetSlide.position.x) * 0.15;
-            targetSlide.position.y += (-4.0 - targetSlide.position.y) * 0.15; // Y de base du hinge est -4.0
+            targetSlide.position.y += (-4.0 - targetSlide.position.y) * 0.15;
+            targetSlide.position.z += (baseZ - targetSlide.position.z) * 0.15;
             
             if (transitionProgress === 1) {
-                // S'assurer que tout est parfait à la fin
                 targetSlide.rotation.set(0,0,0);
-                targetSlide.position.set(0, -4.0, targetSlide.position.z);
+                targetSlide.position.set(0, -4.0, baseZ);
                 
-                shakeIntensity = 0.1; // Petit clac de fin
+                shakeIntensity = 0.1; 
                 shakeTime = 10;
                 isAnimating = false;
             }
         }
     }
 
-    // Effet Camera Shake indépendant
+    // Animation des particules de fumée
+    for (let i = smokeParticles.length - 1; i >= 0; i--) {
+        const p = smokeParticles[i];
+        p.position.x += p.userData.velocityX;
+        p.position.y += p.userData.velocityY;
+        p.position.z += p.userData.velocityZ;
+        
+        p.scale.x *= 1.02;
+        p.scale.y *= 1.02;
+        p.scale.z *= 1.02;
+        
+        p.material.opacity -= 0.015;
+        p.userData.life -= 0.015;
+        
+        if (p.userData.life <= 0) {
+            scene.remove(p);
+            smokeParticles.splice(i, 1);
+        }
+    }
+
+    // Effet Camera Shake
     if (shakeTime > 0) {
         camera.position.x += (Math.random() - 0.5) * shakeIntensity;
         camera.position.y += (Math.random() - 0.5) * shakeIntensity;
