@@ -1,18 +1,19 @@
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { Sky } from 'three/addons/objects/Sky.js';
+// RoomEnvironment retiré – remplacé par HDRI
+// Sky addon retiré – on utilise une HDRI à la place
 import { Water } from 'three/addons/objects/Water.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
 // ─── 1. INITIALISATION DE LA SCÈNE ET DU MOTEUR DE RENDU ───
 const scene = new THREE.Scene();
 
 // Atmosphère : brouillard très léger (linéaire pour plus de contrôle) + couleur ciel
-const skyColor = new THREE.Color('#87CEEB');
-scene.fog = new THREE.Fog(skyColor.clone(), 180, 520);
+const skyColor = new THREE.Color('#c8dce8');
+scene.fog = new THREE.Fog(new THREE.Color('#e8d8c0'), 120, 450); // Brume chaude dorée
 
 // Caméra légèrement plus proche pour que le mur soit imposant, tout en gardant une marge (était à 14.0, on passe à 11.5)
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -23,7 +24,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 3.5; 
+renderer.toneMappingExposure = 2.4; // Plus lumineux + contraste ACES naturel
 
 // Réactivation des ombres douces pour mieux voir le sol
 renderer.shadowMap.enabled = true;
@@ -42,20 +43,34 @@ orbitControls.maxDistance = 500;
 orbitControls.maxPolarAngle = Math.PI * 0.48;
 let freeCameraMode = false;
 
-// ─── 2. ÉCLAIRAGE ET ENVIRONNEMENT (GLOBAL PUR) ───
+// ─── 2. ÉCLAIRAGE ET ENVIRONNEMENT ───
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
-scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
-// Lumière ambiante
-const ambientLight = new THREE.HemisphereLight(0xffffff, 0x000000, 3.0);
+// Chargement HDRI pour le ciel + éclairage environnemental (IBL)
+const hdriLoader = new EXRLoader();
+hdriLoader.load('assets/trees/citrus_orchard_puresky_4k.exr', (texture) => {
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+
+    // Appliquer comme fond de scène (le vrai ciel)
+    scene.background = texture;
+
+    // Générer l'environnement IBL pour les reflets/éclairage indirect
+    const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+    scene.environment = envMap;
+
+    pmremGenerator.dispose();
+});
+
+// Lumière ambiante : ciel chaud en haut, terre chaude en bas
+const ambientLight = new THREE.HemisphereLight(0xffeebb, 0x886633, 1.0);
 scene.add(ambientLight);
 
-// Lumière directionnelle (en haut, à droite, devant) pour projeter une belle ombre sur le sol
-const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
-dirLight.position.set(15, 20, 15);
+// Lumière directionnelle forte – soleil doré de fin d'après-midi
+const dirLight = new THREE.DirectionalLight(0xffd280, 5.0);
+dirLight.position.set(20, 25, 15);
 dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 4096; // Haute résolution pour une ombre propre sur une grande surface
+dirLight.shadow.mapSize.width = 4096;
 dirLight.shadow.mapSize.height = 4096;
 dirLight.shadow.camera.left = -20;
 dirLight.shadow.camera.right = 20;
@@ -64,59 +79,46 @@ dirLight.shadow.camera.bottom = -20;
 dirLight.shadow.camera.near = 0.5;
 dirLight.shadow.camera.far = 50;
 dirLight.shadow.bias = -0.0005;
+dirLight.shadow.radius = 4;
 scene.add(dirLight);
 
-// Très important : ajouter la cible de la lumière à la scène
 scene.add(dirLight.target);
-
-// ─── 2.bis CIEL RÉALISTE (Sky addon – modèle Preetham, ciel clair) ───
-const sky = new Sky();
-sky.scale.setScalar(450000);
-scene.add(sky);
-const skyUniforms = sky.material.uniforms;
-skyUniforms['turbidity'].value = 2;
-skyUniforms['rayleigh'].value = 0.4;
-skyUniforms['mieCoefficient'].value = 0.002;
-skyUniforms['mieDirectionalG'].value = 0.8;
-const sun = new THREE.Vector3(15, 20, 15);
-skyUniforms['sunPosition'].value.copy(sun);
-scene.background = skyColor;
 
 // ─── 3. LE DÉCOR NATUREL (SOL, RUISSEAU, VÉGÉTATION) ───
 
-// A. Texture de Sol Naturel (Terre, Herbe, Cailloux)
-function createGroundTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 1024;
-    const ctx = canvas.getContext('2d');
-    
-    // Terre de base
-    ctx.fillStyle = '#2E1E12'; 
-    ctx.fillRect(0, 0, 1024, 1024);
-    
-    // Herbe (bruit vert)
-    for(let i=0; i<80000; i++) {
-        ctx.fillStyle = Math.random() > 0.5 ? '#1E4620' : '#2d6a4f';
-        ctx.fillRect(Math.random()*1024, Math.random()*1024, 4, 4);
-    }
-    // Cailloux
-    for(let i=0; i<5000; i++) {
-        ctx.fillStyle = Math.random() > 0.5 ? '#555555' : '#888888';
-        ctx.fillRect(Math.random()*1024, Math.random()*1024, 2, 2);
-    }
-    
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(20, 100);
-    return texture;
-}
+// A. Texture de Sol Naturel – textures réalistes (coast_sand_rocks_02)
+const textureLoader = new THREE.TextureLoader();
+const exrLoader = new EXRLoader();
 
-const groundMat = new THREE.MeshStandardMaterial({ 
-    map: createGroundTexture(),
-    roughness: 0.9,  
-    metalness: 0.05
+const groundColor = textureLoader.load('assets/trees/textures/coast_sand_rocks_02_diff_4k.jpg');
+groundColor.wrapS = THREE.RepeatWrapping;
+groundColor.wrapT = THREE.RepeatWrapping;
+groundColor.repeat.set(15, 75);
+groundColor.colorSpace = THREE.SRGBColorSpace;
+
+// Matériau de base (les EXR seront ajoutés de manière asynchrone)
+const groundMat = new THREE.MeshStandardMaterial({
+    map: groundColor,
+    roughness: 0.85,
+    metalness: 0.0,
+});
+
+// Chargement asynchrone des textures EXR (normal + roughness)
+exrLoader.load('assets/trees/textures/coast_sand_rocks_02_nor_gl_4k.exr', (tex) => {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(15, 75);
+    groundMat.normalMap = tex;
+    groundMat.normalScale.set(0.8, 0.8);
+    groundMat.needsUpdate = true;
+});
+
+exrLoader.load('assets/trees/textures/coast_sand_rocks_02_rough_4k.exr', (tex) => {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(15, 75);
+    groundMat.roughnessMap = tex;
+    groundMat.needsUpdate = true;
 });
 
 // Sol cabossé + sillon réaliste pour la rivière (lit creusé en forme de vallée)
@@ -131,18 +133,32 @@ const riverHalfWidth = 10;
 const trenchDepth = 2.2;
 const trenchSlope = 4;
 
-for (let i = 0; i < floorPos.count; i++) {
-    const x = floorPos.getX(i);
-    const localY = floorPos.getY(i);
-    const worldX = x;
-    const worldZ = floorGroundZ - localY;
+// Fonction réutilisable : calcule le bump (décalage Y) du terrain à une position monde (worldX, worldZ)
+function getTerrainBump(worldX, worldZ) {
+    const localY = -(worldZ - floorGroundZ); // inverse de worldZ = floorGroundZ - localY
+    const nx = Math.abs(worldX) / 150;
+    const edgeFactor = Math.max(0, nx - 0.15) + Math.max(0, 1 - nx - 0.15);
+    const noise = Math.sin(worldX * 0.05) * 0.8 + Math.sin(localY * 0.03) * 0.6
+        + Math.sin((worldX + localY) * 0.04) * 0.5;
+    let bump = edgeFactor * noise * 2.5;
+
+    // Aplatir près des slides (zone large et agressive)
+    let flattenFactor = 1.0;
+    for (let s = 0; s < 10; s++) {
+        const slideZ = -s * 20;
+        const dz = Math.abs(worldZ - slideZ);
+        const dx = Math.abs(worldX);
+        if (dx < 12 && dz < 8) {
+            const fz = Math.max(0, 1 - dz / 8);
+            const fx = Math.max(0, 1 - dx / 12);
+            const f = fz * fx;
+            flattenFactor = Math.min(flattenFactor, 1 - f * f); // quadratique = plus plat au centre
+        }
+    }
+    bump *= flattenFactor;
+
     const centerX = riverCenterX(worldZ);
     const distToRiver = Math.abs(worldX - centerX);
-    const nx = Math.abs(x) / 150;
-    const edgeFactor = Math.max(0, nx - 0.15) + Math.max(0, 1 - nx - 0.15);
-    const noise = Math.sin(x * 0.05) * 0.8 + Math.sin(localY * 0.03) * 0.6
-        + Math.sin((x + localY) * 0.04) * 0.5;
-    let bump = edgeFactor * noise * 2.5;
     if (distToRiver < riverHalfWidth + trenchSlope) {
         const t = Math.max(0, 1 - distToRiver / riverHalfWidth);
         const smooth = t * t * (3 - 2 * t);
@@ -150,6 +166,15 @@ for (let i = 0; i < floorPos.count; i++) {
         const valleyDepth = trenchDepth * smooth + trenchDepth * 0.15 * slopeZone * (1 - smooth);
         bump += valleyDepth;
     }
+    return bump;
+}
+
+for (let i = 0; i < floorPos.count; i++) {
+    const x = floorPos.getX(i);
+    const localY = floorPos.getY(i);
+    const worldX = x;
+    const worldZ = floorGroundZ - localY;
+    const bump = getTerrainBump(worldX, worldZ);
     floorPos.setZ(i, floorPos.getZ(i) + bump);
 }
 floorGeo.computeVertexNormals();
@@ -210,50 +235,155 @@ stream.rotation.x = -Math.PI / 2;
 stream.position.set(-25, floorGroundY - trenchDepth + 0.15, -200);
 scene.add(stream);
 
-// C. Herbe en GPU instancing (brins d'herbe)
+// C. Herbe en GPU instancing (brins d'herbe) - OPTIMISÉE PAR CHUNKS
 function createGrassBladeGeometry() {
+    // Blade standing upright in Y: base at y=0, tip at y=h
     const h = 0.4;
     const w = 0.04;
-    const shape = new THREE.Shape();
-    shape.moveTo(0, 0);
-    shape.lineTo(-w * 0.5, 0);
-    shape.lineTo(-w * 0.3, h);
-    shape.lineTo(0, h * 1.05);
-    shape.lineTo(w * 0.3, h);
-    shape.lineTo(w * 0.5, 0);
-    shape.closePath();
-    const geo = new THREE.ShapeGeometry(shape);
-    geo.rotateX(-Math.PI / 2);
-    geo.translate(0, 0, -h / 2);
+    const vertices = new Float32Array([
+        // Triangle 1: left base -> tip -> right base
+        -w * 0.5, 0, 0,
+        -w * 0.3, h * 0.6, 0,
+         0,        h * 1.05, 0,
+        // Triangle 2: left base -> right mid -> tip
+        -w * 0.5, 0, 0,
+         0,        h * 1.05, 0,
+         w * 0.3,  h * 0.6, 0,
+        // Triangle 3: left base -> right mid -> right base
+        -w * 0.5, 0, 0,
+         w * 0.3,  h * 0.6, 0,
+         w * 0.5,  0, 0,
+    ]);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geo.computeVertexNormals();
     return geo;
 }
 const grassBladeGeo = createGrassBladeGeometry();
+
+// Wind shader: inject vertex displacement into MeshStandardMaterial
 const grassMat = new THREE.MeshStandardMaterial({
     color: 0x2d6a4f,
     roughness: 1,
     metalness: 0,
     side: THREE.DoubleSide
 });
-const grassCount = 12000;
-const grassMesh = new THREE.InstancedMesh(grassBladeGeo, grassMat, grassCount);
-grassMesh.castShadow = true;
-grassMesh.receiveShadow = true;
-const grassDummy = new THREE.Object3D();
+
+// We need a global time uniform for the wind
+const grassWindUniforms = { uTime: { value: 0 } };
+
+grassMat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = grassWindUniforms.uTime;
+
+    shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `#include <common>
+        uniform float uTime;`
+    );
+
+    // Vent cohérent : direction dominante (X+, légèrement Z+) avec vagues qui se propagent
+    shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        // Position monde du brin (base)
+        vec4 wPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+
+        // Facteur de hauteur : seul le haut du brin bouge (position.y va de 0 à ~0.42)
+        float hf = clamp(position.y / 0.42, 0.0, 1.0);
+        float hf2 = hf * hf; // quadratique = base bien ancrée, pointe libre
+
+        // Direction dominante du vent : vers X+ avec léger Z+
+        // Vague principale : grande onde qui traverse le champ
+        float mainWave = sin(uTime * 1.2 - wPos.x * 0.08 - wPos.z * 0.05);
+        // Seconde harmonique : ondulations plus rapides et fines
+        float secondWave = sin(uTime * 2.8 - wPos.x * 0.2 + wPos.z * 0.12) * 0.3;
+        // Rafale : variation lente d'intensité
+        float gust = 0.7 + 0.3 * sin(uTime * 0.4 + wPos.x * 0.01 + wPos.z * 0.015);
+
+        float windTotal = (mainWave + secondWave) * gust;
+
+        // Déplacement : direction X dominante, Z secondaire (même sens pour tous les brins)
+        transformed.x += windTotal * hf2 * 0.12;
+        transformed.z += windTotal * hf2 * 0.04;`
+    );
+};
+
+// --- HERBE : restreinte à la zone visible (corridor des slides) ---
+// Slides vont de z=0 à z=-180. On couvre x: -35 à +35, z: +15 à -200
+// Découpage en 10 chunks le long de Z pour un bon frustum culling
+const GRASS_CHUNKS = 10;
+const grassPerChunk = 6000; // 10 * 6000 = 60000 brins concentrés dans la zone utile
+
+const grassAreaMinX = -35;
+const grassAreaMaxX = 35;
+const grassAreaMinZ = -200; // worldZ
+const grassAreaMaxZ = 15;   // worldZ
+const grassChunkDepth = (grassAreaMaxZ - grassAreaMinZ) / GRASS_CHUNKS;
+
 const grassGroundY = -4.0;
-const grassGroundZ = -200;
-for (let i = 0; i < grassCount; i++) {
-    const x = (Math.random() - 0.5) * 280;
-    const z = Math.random() * -400 + 20;
-    if (Math.abs(x + 25) < 18 && z > -350) continue;
-    if (Math.abs(x) < 20 && z > -50) continue;
-    grassDummy.position.set(x, grassGroundY + Math.random() * 0.1, grassGroundZ + z);
-    grassDummy.rotation.y = Math.random() * Math.PI * 2;
-    grassDummy.scale.setScalar(2 + Math.random() * 3);
-    grassDummy.updateMatrix();
-    grassMesh.setMatrixAt(i, grassDummy.matrix);
+const grassDummy = new THREE.Object3D();
+
+const grassGroup = new THREE.Group();
+scene.add(grassGroup);
+
+for (let ci = 0; ci < GRASS_CHUNKS; ci++) {
+    const chunkMesh = new THREE.InstancedMesh(grassBladeGeo, grassMat, grassPerChunk);
+    chunkMesh.castShadow = false;
+    chunkMesh.receiveShadow = true;
+
+    const chunkZMax = grassAreaMaxZ - ci * grassChunkDepth;
+    const chunkZMin = chunkZMax - grassChunkDepth;
+
+    let idx = 0;
+    let attempts = 0;
+    while (idx < grassPerChunk && attempts < grassPerChunk * 5) {
+        attempts++;
+        const wx = THREE.MathUtils.randFloat(grassAreaMinX, grassAreaMaxX);
+        const wz = THREE.MathUtils.randFloat(chunkZMin, chunkZMax);
+
+        // Exclusion : empreinte exacte des slides (rectangle ~15 x 2 centré en x=0)
+        let onSlide = false;
+        for (let s = 0; s < 10; s++) {
+            const slideZ = -s * 20;
+            if (Math.abs(wx) < 7.5 && Math.abs(wz - slideZ) < 1.2) {
+                onSlide = true;
+                break;
+            }
+        }
+        if (onSlide) continue;
+
+        // Échantillonner la hauteur du terrain à cette position
+        const terrainBump = getTerrainBump(wx, wz);
+        // Le sol PlaneGeometry est à Y = floorGroundY, le bump est appliqué via setZ → traduit en Y monde
+        // La PlaneGeometry est pivotée de -PI/2 autour de X, donc Z local → Y monde
+        const groundY = grassGroundY + terrainBump;
+
+        // Variété de taille : petits brins fréquents, quelques grands brins
+        const sizeRand = Math.random();
+        let scale;
+        if (sizeRand < 0.35) scale = 1.5 + Math.random() * 1.5;       // petits
+        else if (sizeRand < 0.75) scale = 3.0 + Math.random() * 2.0;   // moyens
+        else scale = 5.0 + Math.random() * 3.5;                         // grands
+
+        grassDummy.position.set(wx, groundY, wz);
+        grassDummy.rotation.set(
+            (Math.random() - 0.5) * 0.12, // léger penchant X
+            Math.random() * Math.PI * 2,    // rotation Y aléatoire
+            0
+        );
+        grassDummy.scale.set(scale, scale * (0.8 + Math.random() * 0.4), scale);
+        grassDummy.updateMatrix();
+
+        chunkMesh.setMatrixAt(idx, grassDummy.matrix);
+        idx++;
+    }
+
+    chunkMesh.count = idx;
+    chunkMesh.instanceMatrix.needsUpdate = true;
+    chunkMesh.computeBoundingSphere();
+
+    grassGroup.add(chunkMesh);
 }
-grassMesh.instanceMatrix.needsUpdate = true;
-scene.add(grassMesh);
 
 // ─── 4. LES MATÉRIAUX ───
 const textSolidMaterial = new THREE.MeshStandardMaterial({
@@ -513,10 +643,13 @@ function animate() {
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
 
+    // Update grass wind shader time
+    grassWindUniforms.uTime.value = t;
+
     // La lumière avance globalement avec la caméra
     dirLight.position.z += ((camera.position.z + 3.5) - dirLight.position.z) * 0.1;
     dirLight.target.position.z = dirLight.position.z - 15.0;
-    if (skyUniforms && skyUniforms['sunPosition']) skyUniforms['sunPosition'].value.copy(dirLight.position);
+    // (HDRI gère le ciel, plus besoin de synchroniser skyUniforms)
 
     // Animation du shader d'eau (vagues, reflets)
     if (stream.material && stream.material.uniforms && stream.material.uniforms['time'])
