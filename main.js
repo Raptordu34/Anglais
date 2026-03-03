@@ -20,6 +20,74 @@ const HEADER_H = 1.5;
 const HEADER_Y = (PANEL_H / 2) - (HEADER_H / 2);  // 1.85
 const LEFT_X   = -(PANEL_W / 2) + MARGIN;           // -4.4
 
+// --- SYSTÈME DE CADRES (FRAMED PICTURES) ---
+function createFramedPicture(mediaUrl, width = 4, height = 2.5) {
+    const group = new THREE.Group();
+
+    // 1. Le cadre (Frame)
+    const frameDepth = 0.1;
+    const frameThickness = 0.1;
+    
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8, metalness: 0.2 });
+    
+    // Top
+    const topGeo = new THREE.BoxGeometry(width + frameThickness * 2, frameThickness, frameDepth);
+    const topMesh = new THREE.Mesh(topGeo, frameMat);
+    topMesh.position.set(0, height / 2 + frameThickness / 2, 0);
+    group.add(topMesh);
+
+    // Bottom
+    const bottomGeo = new THREE.BoxGeometry(width + frameThickness * 2, frameThickness, frameDepth);
+    const bottomMesh = new THREE.Mesh(bottomGeo, frameMat);
+    bottomMesh.position.set(0, -(height / 2 + frameThickness / 2), 0);
+    group.add(bottomMesh);
+
+    // Left
+    const sideGeo = new THREE.BoxGeometry(frameThickness, height, frameDepth);
+    const leftMesh = new THREE.Mesh(sideGeo, frameMat);
+    leftMesh.position.set(-(width / 2 + frameThickness / 2), 0, 0);
+    group.add(leftMesh);
+
+    // Right
+    const rightMesh = new THREE.Mesh(sideGeo, frameMat);
+    rightMesh.position.set(width / 2 + frameThickness / 2, 0, 0);
+    group.add(rightMesh);
+
+    // 2. Le fond (Backing)
+    const backGeo = new THREE.BoxGeometry(width, height, 0.02);
+    const backMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const backMesh = new THREE.Mesh(backGeo, backMat);
+    backMesh.position.set(0, 0, -frameDepth / 2 + 0.01);
+    group.add(backMesh);
+
+    // 3. Image/Video
+    let texture;
+    if (mediaUrl.endsWith('.mp4')) {
+        const video = document.createElement('video');
+        video.src = mediaUrl;
+        video.crossOrigin = 'anonymous';
+        video.loop = true;
+        video.muted = true;
+        video.play();
+        texture = new THREE.VideoTexture(video);
+        texture.colorSpace = THREE.SRGBColorSpace;
+    } else {
+        const texLoader = new THREE.TextureLoader();
+        texture = texLoader.load(mediaUrl);
+        texture.colorSpace = THREE.SRGBColorSpace;
+    }
+    
+    const imageGeo = new THREE.PlaneGeometry(width, height);
+    const imageMat = new THREE.MeshBasicMaterial({
+        map: texture, color: 0xffffff, side: THREE.FrontSide 
+    });
+    const imageMesh = new THREE.Mesh(imageGeo, imageMat);
+    imageMesh.position.set(0, 0, 0);
+    group.add(imageMesh);
+
+    return group;
+}
+
 // ─── 1. SCÈNE, CAMÉRA, RENDERER ───
 const scene = new THREE.Scene();
 
@@ -38,13 +106,13 @@ document.body.appendChild(renderer.domElement);
 
 // ─── 2. ORBIT CONTROLS ───
 const orbitControls = new OrbitControls(camera, renderer.domElement);
-orbitControls.enabled = true;
+orbitControls.enabled = false;
 orbitControls.target.set(0, 0, 0);
 orbitControls.enableDamping = true;
 orbitControls.dampingFactor = 0.05;
 orbitControls.minDistance = 2;
 orbitControls.maxDistance = 500;
-let freeCameraMode = true;
+let freeCameraMode = false;
 
 // ─── 3. ÉCLAIRAGE ET ENVIRONNEMENT HDRI ───
 const hdriLoader = new EXRLoader();
@@ -242,11 +310,7 @@ const SLIDES = [
     {
         title: "Profit vs. Principles",
         subtitle: "Who Decides the Future of AI?",
-        bullets: [
-            "Anthropic: ethics carry a heavy financial cost.",
-            "OpenAI: monopolistic ambitions override safety.",
-            "Should tech CEOs dictate the rules of warfare?"
-        ]
+        bullets: []
     }
 ];
 
@@ -299,8 +363,8 @@ loader.load('https://unpkg.com/three@0.162.0/examples/fonts/optimer_bold.typefac
         panelMesh.position.z = -0.06;
         faceGroup.add(panelMesh);
 
-        if (i === 0) {
-            // ── SLIDE 1 : grand titre centré avec bloc marble_82 ────────
+        if (i === 0 || i === NUM_SLIDES - 1) {
+            // ── SLIDE 1 & 10 : grand titre centré avec bloc marble_82 ────────
 
             // Mesure le titre pour dimensionner le bloc exactement
             const titleGeo = new TextGeometry(slide.title, {
@@ -327,23 +391,91 @@ loader.load('https://unpkg.com/three@0.162.0/examples/fonts/optimer_bold.typefac
             // Sous-titre centré, sans bloc
             addTextToFace(faceGroup, slide.subtitle, 0.22, -0.25, font, silverMaterial);
         } else {
-            // ── SLIDES 2-10 : bande titre + contenu aligné à gauche ─────
+            // ── SLIDES 2-10 : DÉCOUPAGE EN 4 QUARTIERS ─────
+            // Quartier Haut-Gauche : Titre & Sous-titre
+            // Quartier Bas-Gauche : Texte (bullets)
+            // Quartiers Droite (Haut/Bas) : Images
 
-            // Bande or sombre en haut
+            // Bande or sombre en haut (sur toute la largeur)
             const headerMesh = new THREE.Mesh(new THREE.PlaneGeometry(PANEL_W, HEADER_H), darkHeaderMaterial);
             headerMesh.position.set(0, HEADER_Y, -0.03);
             faceGroup.add(headerMesh);
 
-            // Titre dans la bande, aligné à gauche
-            addTextToFace(faceGroup, slide.title,    0.30, 1.60, font, goldMaterial,   LEFT_X);
+            // Titre dans la bande, aligné à gauche (Haut-Gauche)
+            addTextToFace(faceGroup, slide.title,    0.28, 1.65, font, goldMaterial,   LEFT_X);
 
-            // Sous-titre sous la bande, aligné à gauche
+            // Sous-titre sous la bande, aligné à gauche (Haut-Gauche)
             addTextToFace(faceGroup, slide.subtitle, 0.16, 0.85, font, silverMaterial, LEFT_X);
 
-            // Bullets alignés à gauche
+            // Bullets alignés à gauche (Bas-Gauche)
             slide.bullets.forEach((bullet, bi) => {
-                addTextToFace(faceGroup, `\u2022 ${bullet}`, 0.13, 0.30 - bi * 0.45, font, blackMaterial, LEFT_X);
+                addTextToFace(faceGroup, `\u2022 ${bullet}`, 0.13, -0.15 - bi * 0.45, font, blackMaterial, LEFT_X);
             });
+        }
+
+        // --- GESTION DES IMAGES (QUARTIERS DROITS) ---
+        // Moitié droite : x de 0 à 4.8. Centre = 2.4. (Marge max X = 4.4)
+        // Haut-Droit : y de 0 à 2.6. Centre = 1.3
+        // Bas-Droit : y de 0 à -2.6. Centre = -1.3
+
+        if (i === 1) {
+            // The Pentagon's Ultimatum -> Anthropic logo (Ratio 1.5 - 1620x1080)
+            const framed = createFramedPicture('assets/anthropic.webp', 3.6, 2.4);
+            framed.position.set(2.4, 0.2, 0.1); 
+            faceGroup.add(framed);
+        }
+
+        if (i === 2) {
+            // Anthropic's Red Lines -> Terminator and Trump (Haut-Droit et Bas-Droit)
+            const framed1 = createFramedPicture('assets/terminator.mp4', 3.2, 1.8);
+            framed1.position.set(2.4, 1.3, 0.1); 
+            faceGroup.add(framed1);
+
+            const framed2 = createFramedPicture('assets/donald_trump.mp4', 3.2, 1.8);
+            framed2.position.set(2.4, -1.3, 0.1); 
+            faceGroup.add(framed2);
+        }
+
+        if (i === 3) {
+            // The Retaliation -> Trump Angry (Centré à droite)
+            const framed = createFramedPicture('assets/trump_angry.mp4', 3.4, 3.4);
+            framed.position.set(2.4, 0.0, 0.1); 
+            faceGroup.add(framed);
+        }
+
+        if (i === 4) {
+            // Enter OpenAI -> OpenAI Logo (Centré à droite, ratio 1:1)
+            const framed = createFramedPicture('assets/OpenAI_Logo.png', 3.2, 3.2);
+            framed.position.set(2.4, 0.0, 0.1); 
+            faceGroup.add(framed);
+        }
+
+        if (i === 5) {
+            // A Question of Hypocrisy -> Hypocrisy GIF (Centré à droite, ratio 1:1)
+            const framed = createFramedPicture('assets/hypocrisy.mp4', 3.4, 3.4);
+            framed.position.set(2.4, 0.0, 0.1); 
+            faceGroup.add(framed);
+        }
+
+        if (i === 6) {
+            // The Hidden Financial Motive -> Donald Duck Money (Centré à droite)
+            const framed = createFramedPicture('assets/donald_duck.mp4', 2.8, 3.4);
+            framed.position.set(2.4, 0.0, 0.1); 
+            faceGroup.add(framed);
+        }
+
+        if (i === 7) {
+            // The 2008 Playbook -> Fraud GIF (Centré à droite, ratio 1:1)
+            const framed = createFramedPicture('assets/fraud.mp4', 3.4, 3.4);
+            framed.position.set(2.4, 0.0, 0.1); 
+            faceGroup.add(framed);
+        }
+
+        if (i === 8) {
+            // The Ultimate Trap -> Its A Trap GIF (Centré à droite)
+            const framed = createFramedPicture('assets/its_a_trap.mp4', 4.0, 2.15);
+            framed.position.set(2.4, 0.0, 0.1); 
+            faceGroup.add(framed);
         }
 
         prism.add(faceGroup);
@@ -378,6 +510,19 @@ window.addEventListener('keydown', (event) => {
     if (event.key === 'c' || event.key === 'C') {
         freeCameraMode = !freeCameraMode;
         orbitControls.enabled = freeCameraMode;
+        
+        if (!freeCameraMode) {
+            // Revenir à la première slide
+            camera.position.set(0, 0, APOTHEM + 10);
+            camera.lookAt(0, 0, 0);
+            
+            currentSlideIndex = 0;
+            currentPrismAngle = -FACE_ANGLE / 2;
+            targetPrismAngle = -FACE_ANGLE / 2;
+            prism.rotation.y = currentPrismAngle;
+            isAnimating = false;
+        }
+        
         return;
     }
     if (freeCameraMode) return;

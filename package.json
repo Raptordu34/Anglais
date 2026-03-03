@@ -1,0 +1,30 @@
+{
+  "name": "presentation-3d",
+  "version": "1.0.0",
+  "description": "Présentation 3D Interactive",
+  "main": "electron.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-packager . Presentation_3D --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "author": "",
+  "license": "ISC",
+  "build": {
+    "appId": "com.presentation.3d",
+    "productName": "Presentation",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "Presentation_3D.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^40.6.1",
+    "electron-builder": "^26.8.1",
+    "electron-packager": "^17.1.2"
+  }
+}
