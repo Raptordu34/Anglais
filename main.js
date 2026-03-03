@@ -1,53 +1,21 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-
+import { Sky } from 'three/addons/objects/Sky.js';
+import { Water } from 'three/addons/objects/Water.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'; // Import pour le pavé de verre
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ─── 1. INITIALISATION DE LA SCÈNE ET DU MOTEUR DE RENDU ───
 const scene = new THREE.Scene();
 
-// Création d'un ciel bleu procédural (dégradé + faux nuages)
-function createSkyTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 1024;
-    const ctx = canvas.getContext('2d');
-    
-    // Dégradé du ciel (Bleu profond en haut -> Bleu clair horizon)
-    const gradient = ctx.createLinearGradient(0, 0, 0, 1024);
-    gradient.addColorStop(0, '#1A5276');   // Zénith
-    gradient.addColorStop(0.5, '#4FA1D8'); // Milieu
-    gradient.addColorStop(1, '#D4E6F1');   // Horizon
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 1024, 1024);
-    
-    // Faux nuages très doux
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    for (let i = 0; i < 50; i++) {
-        const x = Math.random() * 1024;
-        const y = Math.random() * 512; // Surtout dans la partie haute
-        const radius = 50 + Math.random() * 150;
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    
-    const texture = new THREE.CanvasTexture(canvas);
-    // Pour que le dégradé reste fixe par rapport à la caméra
-    texture.mapping = THREE.EquirectangularReflectionMapping; 
-    return texture;
-}
-
-// Assigner le ciel et un brouillard de la couleur de l'horizon pour fondre le sol infini
-const skyColor = new THREE.Color('#D4E6F1');
-scene.background = skyColor; // On utilise une couleur unie claire si la texture ne mappe pas parfaitement
-// scene.background = createSkyTexture(); // Alternative texturée, mais une couleur + fog donne un style plus épuré et moderne.
-scene.fog = new THREE.FogExp2(skyColor, 0.015); // Brouillard atmosphérique
+// Atmosphère : brouillard très léger (linéaire pour plus de contrôle) + couleur ciel
+const skyColor = new THREE.Color('#87CEEB');
+scene.fog = new THREE.Fog(skyColor.clone(), 180, 520);
 
 // Caméra légèrement plus proche pour que le mur soit imposant, tout en gardant une marge (était à 14.0, on passe à 11.5)
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 0, 11.5); 
 camera.lookAt(0, 0, 0);
 
@@ -62,6 +30,17 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 document.body.appendChild(renderer.domElement);
+
+// Contrôles caméra libre (temporaire) : touche C pour basculer mode exploration
+const orbitControls = new OrbitControls(camera, renderer.domElement);
+orbitControls.enabled = false;
+orbitControls.target.set(0, -2, -100);
+orbitControls.enableDamping = true;
+orbitControls.dampingFactor = 0.05;
+orbitControls.minDistance = 2;
+orbitControls.maxDistance = 500;
+orbitControls.maxPolarAngle = Math.PI * 0.48;
+let freeCameraMode = false;
 
 // ─── 2. ÉCLAIRAGE ET ENVIRONNEMENT (GLOBAL PUR) ───
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
@@ -88,8 +67,20 @@ dirLight.shadow.bias = -0.0005;
 scene.add(dirLight);
 
 // Très important : ajouter la cible de la lumière à la scène
-// par défaut elle est à (0,0,0). La lumière la regarde toujours.
 scene.add(dirLight.target);
+
+// ─── 2.bis CIEL RÉALISTE (Sky addon – modèle Preetham, ciel clair) ───
+const sky = new Sky();
+sky.scale.setScalar(450000);
+scene.add(sky);
+const skyUniforms = sky.material.uniforms;
+skyUniforms['turbidity'].value = 2;
+skyUniforms['rayleigh'].value = 0.4;
+skyUniforms['mieCoefficient'].value = 0.002;
+skyUniforms['mieDirectionalG'].value = 0.8;
+const sun = new THREE.Vector3(15, 20, 15);
+skyUniforms['sunPosition'].value.copy(sun);
+scene.background = skyColor;
 
 // ─── 3. LE DÉCOR NATUREL (SOL, RUISSEAU, VÉGÉTATION) ───
 
@@ -128,89 +119,141 @@ const groundMat = new THREE.MeshStandardMaterial({
     metalness: 0.05
 });
 
-const floorGeo = new THREE.PlaneGeometry(300, 1000); 
+// Sol cabossé + sillon réaliste pour la rivière (lit creusé en forme de vallée)
+const groundSegmentsX = 120;
+const groundSegmentsY = 200;
+const floorGeo = new THREE.PlaneGeometry(300, 1000, groundSegmentsX, groundSegmentsY);
+const floorPos = floorGeo.attributes.position;
+const floorGroundY = -4.0;
+const floorGroundZ = -200;
+const riverCenterX = (worldZ) => -25 + 8 * Math.sin(0.02 * (-200 - worldZ));
+const riverHalfWidth = 10;
+const trenchDepth = 2.2;
+const trenchSlope = 4;
+
+for (let i = 0; i < floorPos.count; i++) {
+    const x = floorPos.getX(i);
+    const localY = floorPos.getY(i);
+    const worldX = x;
+    const worldZ = floorGroundZ - localY;
+    const centerX = riverCenterX(worldZ);
+    const distToRiver = Math.abs(worldX - centerX);
+    const nx = Math.abs(x) / 150;
+    const edgeFactor = Math.max(0, nx - 0.15) + Math.max(0, 1 - nx - 0.15);
+    const noise = Math.sin(x * 0.05) * 0.8 + Math.sin(localY * 0.03) * 0.6
+        + Math.sin((x + localY) * 0.04) * 0.5;
+    let bump = edgeFactor * noise * 2.5;
+    if (distToRiver < riverHalfWidth + trenchSlope) {
+        const t = Math.max(0, 1 - distToRiver / riverHalfWidth);
+        const smooth = t * t * (3 - 2 * t);
+        const slopeZone = Math.max(0, 1 - (distToRiver - riverHalfWidth) / trenchSlope);
+        const valleyDepth = trenchDepth * smooth + trenchDepth * 0.15 * slopeZone * (1 - smooth);
+        bump += valleyDepth;
+    }
+    floorPos.setZ(i, floorPos.getZ(i) + bump);
+}
+floorGeo.computeVertexNormals();
+
 const floor = new THREE.Mesh(floorGeo, groundMat);
 floor.rotation.x = -Math.PI / 2;
 floor.position.set(0, -4.0, -200); 
 floor.receiveShadow = true;
 scene.add(floor);
 
-// B. Le Ruisseau Sinueux
+// B. Rivière sinueuse avec shader Water (reflets, vagues, normales)
 const streamGeo = new THREE.PlaneGeometry(12, 1000, 32, 100);
 const streamPos = streamGeo.attributes.position;
-// On ondule les vertices X en fonction de leur Y (qui deviendra Z après rotation)
-for(let i=0; i<streamPos.count; i++) {
-    const y = streamPos.getY(i); 
+for (let i = 0; i < streamPos.count; i++) {
+    const y = streamPos.getY(i);
     streamPos.setX(i, streamPos.getX(i) + Math.sin(y * 0.02) * 8.0);
 }
 streamGeo.computeVertexNormals();
 
-const streamMat = new THREE.MeshStandardMaterial({
-    color: 0x1A5276,
-    roughness: 0.1,
-    metalness: 0.8,
-    transparent: true,
-    opacity: 0.85,
-    envMapIntensity: 5.0 // Reflète le ciel fortement
+function createWaterNormalMap() {
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(size, size);
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            const i = (y * size + x) * 4;
+            const nx = (Math.sin(x * 0.3) * Math.cos(y * 0.2) + 1) * 0.5 * 255;
+            const ny = (Math.sin((x + y) * 0.15) + 1) * 0.5 * 255;
+            const nz = 200;
+            imgData.data[i] = nx;
+            imgData.data[i + 1] = ny;
+            imgData.data[i + 2] = nz;
+            imgData.data[i + 3] = 255;
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+}
+
+const waterNormals = createWaterNormalMap();
+const sunDirection = new THREE.Vector3(15, 20, 15).normalize();
+const stream = new Water(streamGeo, {
+    textureWidth: 1024,
+    textureHeight: 1024,
+    waterNormals: waterNormals,
+    sunDirection: sunDirection,
+    sunColor: 0xffffff,
+    waterColor: 0x1a5276,
+    distortionScale: 15,
+    fog: true
 });
-const stream = new THREE.Mesh(streamGeo, streamMat);
 stream.rotation.x = -Math.PI / 2;
-stream.position.set(-25, -3.9, -200); // Placé à gauche et légèrement au-dessus du sol
-stream.receiveShadow = true;
+stream.position.set(-25, floorGroundY - trenchDepth + 0.15, -200);
 scene.add(stream);
 
-// C. Végétation (Arbres et Buissons Low-Poly)
-const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3E2723, roughness: 1.0 });
-const leavesMat1 = new THREE.MeshStandardMaterial({ color: 0x1B5E20, roughness: 0.9 }); // Vert foncé
-const leavesMat2 = new THREE.MeshStandardMaterial({ color: 0x2E7D32, roughness: 0.8 }); // Vert plus clair
-
-for (let i = 0; i < 400; i++) {
-    // Répartition sur 400 mètres derrière
-    const z = Math.random() * -400 + 20; 
-    
-    // On libère un large couloir central pour les slides et la caméra (de X=-16 à X=16)
-    const side = Math.random() > 0.5 ? 1 : -1;
-    const x = side * (16 + Math.random() * 60); 
-    
-    if (Math.random() > 0.6) {
-        // Sapin (Cylindre + Cône)
-        const trunkGeo = new THREE.CylinderGeometry(0.4, 0.6, 2);
-        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-        trunk.position.set(x, -3.0, z);
-        trunk.castShadow = true;
-        trunk.receiveShadow = true;
-        
-        const leavesGeo = new THREE.ConeGeometry(2.5, 7, 5); // 5 faces = style Low Poly
-        const leaves = new THREE.Mesh(leavesGeo, Math.random() > 0.5 ? leavesMat1 : leavesMat2);
-        leaves.position.set(0, 4.5, 0);
-        leaves.castShadow = true;
-        leaves.receiveShadow = true;
-        
-        trunk.add(leaves);
-        scene.add(trunk);
-    } else {
-        // Buisson organique (Sphère déformée)
-        const bushGeo = new THREE.SphereGeometry(1.5 + Math.random() * 1.5, 7, 7);
-        const bush = new THREE.Mesh(bushGeo, leavesMat2);
-        
-        // Perturbation des sommets
-        const pos = bushGeo.attributes.position;
-        for(let j=0; j<pos.count; j++) {
-            pos.setXYZ(
-                j, 
-                pos.getX(j) * (0.8 + Math.random() * 0.4), 
-                pos.getY(j) * (0.8 + Math.random() * 0.4), 
-                pos.getZ(j) * (0.8 + Math.random() * 0.4)
-            );
-        }
-        bushGeo.computeVertexNormals();
-        
-        bush.position.set(x + (Math.random() * 6 - 3), -3.5, z);
-        bush.castShadow = true;
-        bush.receiveShadow = true;
-        scene.add(bush);
-    }
+// C. Herbe en GPU instancing (brins d'herbe)
+function createGrassBladeGeometry() {
+    const h = 0.4;
+    const w = 0.04;
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    shape.lineTo(-w * 0.5, 0);
+    shape.lineTo(-w * 0.3, h);
+    shape.lineTo(0, h * 1.05);
+    shape.lineTo(w * 0.3, h);
+    shape.lineTo(w * 0.5, 0);
+    shape.closePath();
+    const geo = new THREE.ShapeGeometry(shape);
+    geo.rotateX(-Math.PI / 2);
+    geo.translate(0, 0, -h / 2);
+    return geo;
 }
+const grassBladeGeo = createGrassBladeGeometry();
+const grassMat = new THREE.MeshStandardMaterial({
+    color: 0x2d6a4f,
+    roughness: 1,
+    metalness: 0,
+    side: THREE.DoubleSide
+});
+const grassCount = 12000;
+const grassMesh = new THREE.InstancedMesh(grassBladeGeo, grassMat, grassCount);
+grassMesh.castShadow = true;
+grassMesh.receiveShadow = true;
+const grassDummy = new THREE.Object3D();
+const grassGroundY = -4.0;
+const grassGroundZ = -200;
+for (let i = 0; i < grassCount; i++) {
+    const x = (Math.random() - 0.5) * 280;
+    const z = Math.random() * -400 + 20;
+    if (Math.abs(x + 25) < 18 && z > -350) continue;
+    if (Math.abs(x) < 20 && z > -50) continue;
+    grassDummy.position.set(x, grassGroundY + Math.random() * 0.1, grassGroundZ + z);
+    grassDummy.rotation.y = Math.random() * Math.PI * 2;
+    grassDummy.scale.setScalar(2 + Math.random() * 3);
+    grassDummy.updateMatrix();
+    grassMesh.setMatrixAt(i, grassDummy.matrix);
+}
+grassMesh.instanceMatrix.needsUpdate = true;
+scene.add(grassMesh);
 
 // ─── 4. LES MATÉRIAUX ───
 const textSolidMaterial = new THREE.MeshStandardMaterial({
@@ -440,6 +483,12 @@ function startTransition(direction) {
 }
 
 window.addEventListener('keydown', (event) => {
+    if (event.key === 'c' || event.key === 'C') {
+        freeCameraMode = !freeCameraMode;
+        orbitControls.enabled = freeCameraMode;
+        return;
+    }
+    if (freeCameraMode) return;
     if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'Enter') {
         startTransition(1);
     }
@@ -462,10 +511,16 @@ const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
-    
+    const t = clock.getElapsedTime();
+
     // La lumière avance globalement avec la caméra
     dirLight.position.z += ((camera.position.z + 3.5) - dirLight.position.z) * 0.1;
     dirLight.target.position.z = dirLight.position.z - 15.0;
+    if (skyUniforms && skyUniforms['sunPosition']) skyUniforms['sunPosition'].value.copy(dirLight.position);
+
+    // Animation du shader d'eau (vagues, reflets)
+    if (stream.material && stream.material.uniforms && stream.material.uniforms['time'])
+        stream.material.uniforms['time'].value = t;
 
     if (isAnimating) {
         const activeSlide = slides[currentSlideIndex];
@@ -707,8 +762,12 @@ function animate() {
         shakeTime--;
     }
     
-    // Application finale du LookAt
-    camera.lookAt(currentLookAt);
+    // Application finale du LookAt (désactivé en mode caméra libre)
+    if (orbitControls.enabled) {
+        orbitControls.update();
+    } else {
+        camera.lookAt(currentLookAt);
+    }
     
     renderer.render(scene, camera);
 }
