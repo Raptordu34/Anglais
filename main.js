@@ -12,8 +12,7 @@ import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 const scene = new THREE.Scene();
 
 // Atmosphère : brouillard très léger (linéaire pour plus de contrôle) + couleur ciel
-const skyColor = new THREE.Color('#c8dce8');
-scene.fog = new THREE.Fog(new THREE.Color('#e8d8c0'), 120, 450); // Brume chaude dorée
+// Pas de fog – le ciel HDRI gère l'atmosphère
 
 // Caméra légèrement plus proche pour que le mur soit imposant, tout en gardant une marge (était à 14.0, on passe à 11.5)
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -24,7 +23,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 2.4; // Plus lumineux + contraste ACES naturel
+renderer.toneMappingExposure = 1.0; // Neutre – laisse la HDRI dicter l'ambiance
 
 // Réactivation des ombres douces pour mieux voir le sol
 renderer.shadowMap.enabled = true;
@@ -49,7 +48,7 @@ pmremGenerator.compileEquirectangularShader();
 
 // Chargement HDRI pour le ciel + éclairage environnemental (IBL)
 const hdriLoader = new EXRLoader();
-hdriLoader.load('assets/trees/citrus_orchard_puresky_4k.exr', (texture) => {
+hdriLoader.load('assets/trees/kloppenheim_06_puresky_4k.exr', (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
 
     // Appliquer comme fond de scène (le vrai ciel)
@@ -62,12 +61,12 @@ hdriLoader.load('assets/trees/citrus_orchard_puresky_4k.exr', (texture) => {
     pmremGenerator.dispose();
 });
 
-// Lumière ambiante : ciel chaud en haut, terre chaude en bas
-const ambientLight = new THREE.HemisphereLight(0xffeebb, 0x886633, 1.0);
+// Lumière ambiante légère (la HDRI fournit déjà l'IBL)
+const ambientLight = new THREE.HemisphereLight(0xffeedd, 0x443322, 0.3);
 scene.add(ambientLight);
 
-// Lumière directionnelle forte – soleil doré de fin d'après-midi
-const dirLight = new THREE.DirectionalLight(0xffd280, 5.0);
+// Lumière directionnelle – soleil
+const dirLight = new THREE.DirectionalLight(0xfff0dd, 2.5);
 dirLight.position.set(20, 25, 15);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.width = 4096;
@@ -90,24 +89,33 @@ scene.add(dirLight.target);
 const textureLoader = new THREE.TextureLoader();
 const exrLoader = new EXRLoader();
 
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
 const groundColor = textureLoader.load('assets/trees/textures/coast_sand_rocks_02_diff_4k.jpg');
 groundColor.wrapS = THREE.RepeatWrapping;
 groundColor.wrapT = THREE.RepeatWrapping;
-groundColor.repeat.set(15, 75);
+groundColor.repeat.set(8, 40); // Repeat réduit pour moins d'aliasing
 groundColor.colorSpace = THREE.SRGBColorSpace;
+groundColor.anisotropy = maxAniso;
+groundColor.minFilter = THREE.LinearMipmapLinearFilter;
+groundColor.magFilter = THREE.LinearFilter;
+groundColor.generateMipmaps = true;
 
 // Matériau de base (les EXR seront ajoutés de manière asynchrone)
 const groundMat = new THREE.MeshStandardMaterial({
     map: groundColor,
-    roughness: 0.85,
+    roughness: 1.0,
     metalness: 0.0,
+    envMapIntensity: 0.15, // Quasi pas de reflets IBL sur le sol
 });
 
 // Chargement asynchrone des textures EXR (normal + roughness)
 exrLoader.load('assets/trees/textures/coast_sand_rocks_02_nor_gl_4k.exr', (tex) => {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(15, 75);
+    tex.repeat.set(8, 40);
+    tex.anisotropy = maxAniso;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
     groundMat.normalMap = tex;
     groundMat.normalScale.set(0.8, 0.8);
     groundMat.needsUpdate = true;
@@ -116,7 +124,9 @@ exrLoader.load('assets/trees/textures/coast_sand_rocks_02_nor_gl_4k.exr', (tex) 
 exrLoader.load('assets/trees/textures/coast_sand_rocks_02_rough_4k.exr', (tex) => {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(15, 75);
+    tex.repeat.set(8, 40);
+    tex.anisotropy = maxAniso;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
     groundMat.roughnessMap = tex;
     groundMat.needsUpdate = true;
 });
