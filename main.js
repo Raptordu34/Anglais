@@ -24,8 +24,8 @@ camera.lookAt(0, 0, 0);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMapping = THREE.LinearToneMapping;
+renderer.toneMappingExposure = 0.5;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
@@ -44,11 +44,11 @@ let freeCameraMode = true;
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
 
-// HDRI pour IBL (reflets uniquement, fond noir)
+// HDRI pour IBL et affichage en arrière-plan
 const hdriLoader = new EXRLoader();
 hdriLoader.load('assets/qwantani_dusk_2_puresky_4k.exr', (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
-    scene.background = new THREE.Color(0x000000);
+    scene.background = texture;
     const envMap = pmremGenerator.fromEquirectangular(texture).texture;
     scene.environment = envMap;
     pmremGenerator.dispose();
