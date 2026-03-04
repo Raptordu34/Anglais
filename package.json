@@ -5,7 +5,8 @@
   "main": "electron.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . Presentation_3D --platform=win32 --arch=x64 --out=dist --overwrite"
+    "build": "electron-packager . Presentation_3D --platform=win32 --arch=x64 --out=dist --overwrite",
+    "build-portable": "electron-builder --win portable"
   },
   "author": "",
   "license": "ISC",
