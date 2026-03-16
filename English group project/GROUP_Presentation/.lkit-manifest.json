@@ -1,0 +1,32 @@
+{
+  "templateName": "presentation",
+  "templateVersion": "1.0.0",
+  "createdAt": "2026-03-16T21:22:52.218Z",
+  "fileHashes": {
+    "components.css": "8f084aec3caf451b0d271e97a996922ddad8114b60ae3f1fa2d7925600154e92",
+    "PROMPT.md": "7be3548c726baffbb6bb033b5af60f11c07afbdf42daaf9af2079cbd6f6c66fd",
+    "slide-EXAMPLE.html": "98d00c1297ac165d6caf16abec068a46a16a6abbefc85968dbdf2d5fae6cf6e2",
+    "design/base.css": "c528758a14a26fcdacb013e7bd49773ced9fd623d691c3492188d27472feb3ed",
+    "design/DESIGN_SYSTEM.md": "dda0e7354d6d2c9fa643560c44bc8a3a8f0498555d2cd6f0ccc784cef2583477",
+    "design/svg/arch-preview.html": "b8afec5e6a35c46f31cd442f81b7e14f25d84b646944f9af934b7eff7a4da68f",
+    "design/svg/arch.md": "89948ff56b79f008114f441853683164debd3127d0acb542aff9382566572081",
+    "design/svg/arrows-preview.html": "028989c0aeeaab6a21b5073edb43335faea4371d394329020b783d6d37e3977b",
+    "design/svg/arrows.md": "b35eb159f03a346feebf70517de6e52adf5dbe9097121040c07cf3d7eaab6408",
+    "design/svg/brace-preview.html": "2670a006389a8cf6a80b4462cb32ac8ae0c6de19b6abfed8eff9dc0e5d7574bb",
+    "design/svg/braces.md": "e5106624d47f8fb73c29aef199c56c8089ffa2850f23d4b6e4aafb50555acb87",
+    "design/svg/callout-preview.html": "724ce95fe410b4c96bda6b43262afb2b4b85f963254753f4f7904330be71b033",
+    "design/svg/callouts.md": "4d127eaaf3ca60b9944ecfc8cd29a18f4d6da9a1437fd88723c577f8c89ad23f",
+    "design/svg/CATALOG.md": "cbacddc58bfe8725901a4480541613fc0702784d1a2523ae427e495a6226f9a1",
+    "design/svg/charts-preview.html": "43eb50f452e40a1f7ef6aac1825ef460b2a1fcfd38dee4ef4de8fa36d166b71b",
+    "design/svg/charts.md": "a0c8c40e1b433885d3a57c625f93d32740139c56cc4ecef6edfcc36b061eb7cf",
+    "design/svg/line-dashed-preview.html": "d95fb3345f061b78582d635e8eefcacbd37c52d974e9d6cbc7144967492e30e2",
+    "design/svg/line-preview.html": "6112dd0d49454e84733c17fe9018099113a15ea51af35f514c8a57587ff243a7",
+    "design/svg/lines.md": "afc2c3d68332f62a769fe4f1bbef035add258db39c93944f191789494c6ec3a2",
+    "design/svg/nodes-preview.html": "11eefbcc9dee9abfd7efa5516c33dc36a18dd61d4c8624104d5989870b8ef7fb",
+    "design/svg/nodes.md": "cbad5a10c6ec1cc20bbf52a3ccb039e9a263458ad2fcc31cac1de47bd29f85a4",
+    "design/tokens.css": "135cfc43b821f72e7bd89cd1bf44cbc2a8cde878d60ceeffcc2fb787f10e066e",
+    "layouts/sidebar-iframe.css": "4193c1804cbd8cf8a132e71797ce6f2a035585777da3dea9db7129c660f0cf86",
+    "layouts/single-scroll.css": "5ebe74317639ce6875ab38685b704d2577d4e1d94141b6999b0e3a52ffd02e07",
+    "layouts/slides.css": "f695200dbe791696f8340f31e46726c24be2521f436a8c9a7ba396e1060705cf"
+  }
+}
