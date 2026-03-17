@@ -616,6 +616,13 @@ p.source::before { content: '—'; font-style: normal; color: rgba(255,255,255,0
 .key-value dt { color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; white-space: nowrap; padding: 0.12rem 0; margin: 0; }
 .key-value dd { color: var(--text-primary); font-size: 0.85rem; font-family: 'Courier New', monospace; margin: 0; padding: 0.12rem 0; }
 
+/* ── KEY-POINTS VARIANTE : badge à droite, sans check gauche ─────── */
+ul.key-points-pair li { justify-content: space-between; }
+ul.key-points-pair li::before { display: none; }
+
+/* Checkmark couleur accent (orange) au lieu du vert par défaut */
+ul.key-points.accent li::before { color: var(--accent); }
+
 /* ── NOTE LÉGÈRE ──────────────────────────────────────────────────── */
 p.inline-note {
     font-size: 0.88rem !important;

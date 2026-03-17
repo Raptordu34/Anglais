@@ -852,6 +852,8 @@
             'slide-future-robots.html',
             'slide-future-weapons.html',
             'slide-future-singularity.html',
+            // Kahoot interactive quiz
+            'slide-kahoot.html',
             // Conclusion
             'slide-conclusion.html',
         ];
@@ -1026,7 +1028,18 @@
                 try {
                     const res = await fetch(file);
                     if (!res.ok) throw new Error(res.status);
-                    container.insertAdjacentHTML('beforeend', await res.text());
+                    const html = await res.text();
+                    container.insertAdjacentHTML('beforeend', html);
+                    // insertAdjacentHTML ne déclenche pas les <script> — on les réexécute manuellement
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = html;
+                    tmp.querySelectorAll('script').forEach(orig => {
+                        const s = document.createElement('script');
+                        [...orig.attributes].forEach(a => s.setAttribute(a.name, a.value));
+                        s.textContent = orig.textContent;
+                        document.head.appendChild(s);
+                        document.head.removeChild(s);
+                    });
                 } catch (e) {
                     console.warn('Slide introuvable :', file, '(serveur requis — pas file://)');
                 }
