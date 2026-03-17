@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 
 // ─── CONSTANTES DU PRISME ───
-const NUM_SLIDES = 13;
+const NUM_SLIDES = 12;
 const FACE_ANGLE = (2 * Math.PI) / NUM_SLIDES;
 const FACE_WIDTH = 10;
 const PRISM_HEIGHT = 5.6;
@@ -421,18 +421,9 @@ const SLIDES = [
     },
     {
         title: "The 2008 Playbook",
-        subtitle: '"Too Big To Fail"',
+        subtitle: '"Too Big To Fail" — Entanglement as a Strategy',
         bullets: [
             "CFO requests a government 'backstop' for loans.",
-            "Strategy: shift investor risk onto US taxpayers.",
-            "Echoes of the Lehman Brothers collapse."
-        ]
-    },
-    {
-        title: "The Ultimate Trap",
-        subtitle: "Entanglement as a Strategy",
-        bullets: [
-            "Sen. Elizabeth Warren warns against this strategy.",
             "Pentagon deal makes OpenAI indispensable.",
             "If bankrupt, the government must bail them out."
         ]
@@ -629,30 +620,23 @@ loader.load('https://unpkg.com/three@0.162.0/examples/fonts/optimer_bold.typefac
         }
 
         if (i === 8) {
-            // The Ultimate Trap -> Its A Trap GIF (Centré à droite)
-            const framed = createFramedPicture('assets/its_a_trap.mp4', 4.0, 2.15);
-            framed.position.set(2.4, 0.0, 0.1); 
+            // The Counter-Strike -> Anthropic logo
+            const framed = createFramedPicture('assets/anthropic.webp', 3.6, 2.4);
+            framed.position.set(2.4, 0.2, 0.1);
             faceGroup.add(framed);
         }
 
         if (i === 9) {
-            // The Counter-Strike -> Anthropic logo (Reuse)
-            const framed = createFramedPicture('assets/anthropic.webp', 3.6, 2.4);
-            framed.position.set(2.4, 0.2, 0.1); 
+            // The Public's Verdict -> OpenAI Logo (Boycott target)
+            const framed = createFramedPicture('assets/OpenAI_Logo.png', 3.2, 3.2);
+            framed.position.set(2.4, 0.0, 0.1);
             faceGroup.add(framed);
         }
 
         if (i === 10) {
-            // The Public's Verdict -> OpenAI Logo (Boycott target)
-            const framed = createFramedPicture('assets/OpenAI_Logo.png', 3.2, 3.2);
-            framed.position.set(2.4, 0.0, 0.1); 
-            faceGroup.add(framed);
-        }
-
-        if (i === 11) {
             // The $14 Billion Leak -> Donald Duck Money (Reuse)
             const framed = createFramedPicture('assets/donald_duck.mp4', 2.8, 3.4);
-            framed.position.set(2.4, 0.0, 0.1); 
+            framed.position.set(2.4, 0.0, 0.1);
             faceGroup.add(framed);
         }
 
@@ -1032,7 +1016,7 @@ window.addEventListener('keydown', (event) => {
             lookUpDirection = 1;
             lookUpTransitioning = true;
         }
-        if (currentSlideIndex === 12 && !isLookingUp12 && !lookUpTransitioning12) {
+        if (currentSlideIndex === 11 && !isLookingUp12 && !lookUpTransitioning12) {
             lookUpDirection12 = 1;
             lookUpTransitioning12 = true;
             if (questionGroup) questionGroup.visible = true;

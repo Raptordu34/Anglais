@@ -76,3 +76,32 @@ body {
 }
 .slide-nav button:hover { background: rgba(249,115,22,0.35); transform: translateY(-2px); }
 .slide-counter { color: var(--text-secondary); font-size: 0.9rem; min-width: 60px; text-align: center; }
+
+/* ── LAYOUT 4 QUADRANTS ─────────────────────────────────────────── */
+/* Quand .slide-content contient un .slide-body, il s'étire pour
+   remplir la hauteur disponible dans la slide */
+.slide-content:has(.slide-body) {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+}
+
+/* Grille 2×2 : occupe tout l'espace restant sous le h2 */
+.slide-body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.slide-body > * {
+    min-height: 0;
+    min-width: 0;
+}
+
+/* Classes utilitaires pour l'occupation des quadrants */
+.slide-body > .q-col  { grid-row: 1 / -1; }         /* colonne entière (haut+bas) */
+.slide-body > .q-row  { grid-column: 1 / -1; }      /* ligne entière (gauche+droite) */
+.slide-body > .q-full { grid-column: 1 / -1; grid-row: 1 / -1; } /* tout */

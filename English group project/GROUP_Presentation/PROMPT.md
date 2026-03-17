@@ -165,7 +165,7 @@ et un `data-auto-animate-key` sur les éléments qui doivent être reliés visue
 
 | Composant | Usage |
 |-----------|-------|
-| `<div class="two-col">` | Grille 2 colonnes |
+| `<div class="slide-body">` | **Grille 2×2 obligatoire** pour toutes les slides de contenu (voir règle ci-dessous) |
 | `<div class="compare-grid">` | Comparaison (`.compare-item.good/.bad/.neutral` + `data-label=""`) |
 | `<div class="figure-box">` | Image ou schéma avec légende |
 
