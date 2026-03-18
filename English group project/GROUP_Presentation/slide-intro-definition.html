@@ -1,25 +1,205 @@
 <!-- slide-intro-definition.html -->
+<style>
+  /* ── Intelligence Definition Slide ─────────────────────────────── */
+
+  .ic-def-box {
+    flex-shrink: 0;
+    background: rgba(214,117,86,0.07);
+    border: 1px solid rgba(214,117,86,0.22);
+    border-radius: 12px;
+    padding: 0.55rem 1.5rem;
+    margin-bottom: 0.4rem;
+    text-align: center;
+  }
+  .ic-def-box p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+  }
+  .ic-def-box em {
+    color: var(--accent);
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  .ic-map-wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ic-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* ── Central node ── */
+  .ic-center-shape {
+    fill: rgba(214,117,86,0.13);
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    filter: drop-shadow(0 0 14px rgba(214,117,86,0.3));
+  }
+  .ic-center-label {
+    fill: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── Branch lines — état initial caché, PAS de transition ── */
+  .ic-line {
+    fill: none;
+    stroke: rgba(214,117,86,0.5);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: var(--ll, 200);
+    stroke-dashoffset: var(--ll, 200);
+    /* Aucune transition ici intentionnellement */
+  }
+
+  /* ── Leaf nodes ── */
+  .ic-leaf-bg {
+    fill: rgba(38,38,36,0.92);
+    stroke: rgba(255,255,255,0.13);
+    stroke-width: 1.5;
+  }
+  .ic-leaf-text {
+    fill: var(--text-body);
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+
+  /* ── Leaf groups — état initial caché, PAS de transition ── */
+  .ic-leaf-group {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scale(0);
+    opacity: 0;
+    /* Aucune transition ici intentionnellement */
+  }
+
+  /* ── État animé : transition UNIQUEMENT quand .anim est présent ── */
+  .ic-branch.anim .ic-line {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 0.55s ease-in-out var(--ld, 0s);
+  }
+  .ic-branch.anim .ic-leaf-group {
+    transform: scale(1);
+    opacity: 1;
+    transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fd, 0s),
+                opacity 0.45s ease var(--fd, 0s);
+  }
+</style>
+
 <div class="slide">
-    <div class="slide-content">
-        <h2>What is Intelligence?</h2>
-        <div class="slide-body">
-            <div style="display:flex;flex-direction:column;">
-                <div class="highlight-box" style="flex:1;margin-top:0;display:flex;align-items:center;justify-content:center;text-align:center;">
-                    <p style="margin:0;font-size:1.1rem;"><strong>Learn</strong> · <strong>Adapt</strong> · <strong>Solve</strong></p>
-                </div>
-            </div>
-            <div style="display:flex;flex-direction:column;">
-                <ul class="steps" style="flex:1;margin-top:0;">
-                    <li class="fragment" data-fragment-index="1">Learn</li>
-                    <li class="fragment" data-fragment-index="2">Understand</li>
-                    <li class="fragment" data-fragment-index="3">Reason</li>
-                    <li class="fragment" data-fragment-index="4">Adapt</li>
-                    <li class="fragment" data-fragment-index="5">Empathise</li>
-                </ul>
-            </div>
-            <div class="q-row">
-                <p class="inline-note fragment" data-fragment-index="6">5 components of human intelligence — the benchmark for AI.</p>
-            </div>
-        </div>
+  <div class="slide-content" style="padding-top:2rem;padding-bottom:1.5rem;">
+
+    <h2>What is Intelligence?</h2>
+
+    <div class="ic-def-box">
+      <p>Intelligence&nbsp;: <em>"Ability to learn from experience, solve problems, and use knowledge to adapt to new experiences"</em></p>
     </div>
+
+    <div class="ic-map-wrap">
+      <svg class="ic-svg" viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg">
+
+        <!-- Branches BEFORE central node → rendered behind the ellipse -->
+
+        <!-- Branch 1 — LEARN (top) -->
+        <g class="ic-branch ic-b1" style="--ll:72;--ld:0.30s;--fd:0.85s">
+          <line class="ic-line" x1="450" y1="124" x2="450" y2="52"/>
+          <g class="ic-leaf-group">
+            <ellipse class="ic-leaf-bg" cx="450" cy="30" rx="58" ry="22"/>
+            <text class="ic-leaf-text" x="450" y="30" text-anchor="middle" dominant-baseline="middle">Learn</text>
+          </g>
+        </g>
+
+        <!-- Branch 2 — REASONING (upper-right) -->
+        <g class="ic-branch ic-b2" style="--ll:120;--ld:1.40s;--fd:1.95s">
+          <line class="ic-line" x1="546" y1="152" x2="648" y2="88"/>
+          <g class="ic-leaf-group">
+            <ellipse class="ic-leaf-bg" cx="722" cy="68" rx="76" ry="22"/>
+            <text class="ic-leaf-text" x="722" y="68" text-anchor="middle" dominant-baseline="middle">Reasoning</text>
+          </g>
+        </g>
+
+        <!-- Branch 3 — ADAPTABILITY (lower-right) -->
+        <g class="ic-branch ic-b3" style="--ll:136;--ld:2.50s;--fd:3.05s">
+          <line class="ic-line" x1="541" y1="192" x2="646" y2="278"/>
+          <g class="ic-leaf-group">
+            <ellipse class="ic-leaf-bg" cx="722" cy="300" rx="84" ry="22"/>
+            <text class="ic-leaf-text" x="722" y="300" text-anchor="middle" dominant-baseline="middle">Adaptability</text>
+          </g>
+        </g>
+
+        <!-- Branch 4 — EMOTIONAL INTELLIGENCE (lower-left) -->
+        <g class="ic-branch ic-b4" style="--ll:115;--ld:3.60s;--fd:4.15s">
+          <line class="ic-line" x1="363" y1="195" x2="284" y2="278"/>
+          <g class="ic-leaf-group">
+            <ellipse class="ic-leaf-bg" cx="178" cy="300" rx="114" ry="22"/>
+            <text class="ic-leaf-text" x="178" y="300" text-anchor="middle" dominant-baseline="middle">Emotional Intelligence</text>
+          </g>
+        </g>
+
+        <!-- Branch 5 — UNDERSTANDING (upper-left) -->
+        <g class="ic-branch ic-b5" style="--ll:110;--ld:4.70s;--fd:5.25s">
+          <line class="ic-line" x1="355" y1="151" x2="264" y2="88"/>
+          <g class="ic-leaf-group">
+            <ellipse class="ic-leaf-bg" cx="178" cy="68" rx="94" ry="22"/>
+            <text class="ic-leaf-text" x="178" y="68" text-anchor="middle" dominant-baseline="middle">Understanding</text>
+          </g>
+        </g>
+
+        <!-- Central node AFTER branches → rendered on top, hides line endpoints -->
+        <ellipse class="ic-center-shape" cx="450" cy="170" rx="104" ry="46"/>
+        <text class="ic-center-label" x="450" y="162" text-anchor="middle">Components of</text>
+        <text class="ic-center-label" x="450" y="181" text-anchor="middle">Intelligence</text>
+
+      </svg>
+    </div>
+
+  </div>
 </div>
+
+<script>
+(function () {
+  var svg   = document.querySelector('.ic-svg');
+  var slide = svg && svg.closest('.slide');
+  if (!svg || !slide) return;
+
+  var BRANCHES = ['ic-b1','ic-b2','ic-b3','ic-b4','ic-b5'];
+
+  function startAnim() {
+    BRANCHES.forEach(function (cls) {
+      var branch = svg.querySelector('.' + cls);
+      if (!branch) return;
+      // 1. Retirer .anim → retour à l'état caché instantané (pas de transition sans .anim)
+      branch.classList.remove('anim');
+      // 2. Forcer un reflow pour que le navigateur enregistre l'état sans .anim
+      branch.getBoundingClientRect();
+      // 3. Ajouter .anim → la transition se déclenche
+      branch.classList.add('anim');
+    });
+  }
+
+  function stopAnim() {
+    BRANCHES.forEach(function (cls) {
+      var branch = svg.querySelector('.' + cls);
+      if (branch) branch.classList.remove('anim');
+      // Pas de reflow nécessaire : la suppression est instantanée (pas de transition sans .anim)
+    });
+  }
+
+  document.addEventListener('slidechange', function () {
+    slide.classList.contains('active') ? startAnim() : stopAnim();
+  });
+}());
+</script>

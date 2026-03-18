@@ -1,43 +1,21 @@
 <!-- slide-intro-tests.html -->
 <div class="slide">
-    <div class="slide-content">
+    <div class="slide-content" style="display:flex;flex-direction:column;align-self:stretch;">
         <h2>Measuring AI Intelligence</h2>
-        <div class="slide-body">
-            <!-- Q1: top-left — Turing Test -->
-            <div style="grid-column:1;grid-row:1;display:flex;flex-direction:column;">
-                <div class="highlight-box" style="flex:1;margin-top:0;display:flex;align-items:center;">
-                    <div>
-                        <strong>Turing Test</strong> (1950)<br>
-                        Can a machine pass as human in conversation?<br>
-                        <em style="color:var(--text-secondary);font-size:0.9rem;">First attempt: ELIZA, 1965</em>
-                    </div>
-                </div>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:1rem;">
+            <div style="flex:1;padding:1rem 1.25rem;background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.15);border-left:4px solid rgba(52,211,153,0.45);border-radius:12px;display:flex;flex-direction:column;justify-content:center;">
+                <span class="badge badge-green" style="width:fit-content;margin-bottom:0.4rem;">Weak AI</span>
+                <span style="color:var(--text-body);font-size:0.95rem;">Rule-based, predefined tasks</span>
             </div>
-            <!-- Q3: bottom-left — ARC Benchmark -->
-            <div style="grid-column:1;grid-row:2;display:flex;flex-direction:column;">
-                <div class="highlight-box" style="flex:1;margin-top:0;display:flex;align-items:center;">
-                    <div>
-                        <strong>ARC Benchmark</strong><br>
-                        Pattern-based abstract reasoning — tests general intelligence.
-                    </div>
-                </div>
+            <div style="flex:1;padding:1rem 1.25rem;background:rgba(214,117,86,0.05);border:1px solid rgba(214,117,86,0.15);border-left:4px solid rgba(214,117,86,0.45);border-radius:12px;display:flex;flex-direction:column;justify-content:center;">
+                <span class="badge badge-orange" style="width:fit-content;margin-bottom:0.4rem;">Strong AI</span>
+                <span style="color:var(--text-body);font-size:0.95rem;">Self-aware, autonomous goals</span>
             </div>
-            <!-- Q2+Q4: right column — AI levels -->
-            <div style="grid-column:2;grid-row:1/-1;display:flex;flex-direction:column;gap:0.6rem;">
-                <div style="flex:1;padding:1rem 1.25rem;background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.15);border-left:4px solid rgba(52,211,153,0.45);border-radius:12px;display:flex;flex-direction:column;justify-content:center;">
-                    <span class="badge badge-green" style="width:fit-content;margin-bottom:0.4rem;">Weak AI</span>
-                    <span style="color:var(--text-body);font-size:0.95rem;">Rule-based, predefined tasks</span>
-                </div>
-                <div style="flex:1;padding:1rem 1.25rem;background:rgba(214,117,86,0.05);border:1px solid rgba(214,117,86,0.15);border-left:4px solid rgba(214,117,86,0.45);border-radius:12px;display:flex;flex-direction:column;justify-content:center;">
-                    <span class="badge badge-orange" style="width:fit-content;margin-bottom:0.4rem;">Strong AI</span>
-                    <span style="color:var(--text-body);font-size:0.95rem;">Self-aware, autonomous goals</span>
-                </div>
-                <div style="flex:1;padding:1rem 1.25rem;background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.15);border-left:4px solid rgba(248,113,113,0.45);border-radius:12px;display:flex;flex-direction:column;justify-content:center;">
-                    <span class="badge badge-red" style="width:fit-content;margin-bottom:0.4rem;">Super AI</span>
-                    <span style="color:var(--text-body);font-size:0.95rem;">Beyond human — theoretical</span>
-                </div>
-                <p class="inline-note" style="margin:0;flex-shrink:0;">Currently at the <strong>Weak AI</strong> stage.</p>
+            <div style="flex:1;padding:1rem 1.25rem;background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.15);border-left:4px solid rgba(248,113,113,0.45);border-radius:12px;display:flex;flex-direction:column;justify-content:center;">
+                <span class="badge badge-red" style="width:fit-content;margin-bottom:0.4rem;">Super AI</span>
+                <span style="color:var(--text-body);font-size:0.95rem;">Beyond human — theoretical</span>
             </div>
+            <p class="inline-note" style="margin:0;flex-shrink:0;">Currently at the <strong>Weak AI</strong> stage.</p>
         </div>
     </div>
 </div>

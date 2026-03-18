@@ -962,8 +962,8 @@
             // Introduction — Clara
             'slide-section-intro.html',
             'slide-intro-definition.html',
-            'slide-intro-types.html',
             'slide-intro-tests.html',
+            'slide-turing-video.html',
             // Part I — The Past — Lucas
             'slide-section-past.html',
             'slide-past-origins.html',
@@ -1037,11 +1037,11 @@
 
         // ── Date-chain config ─────────────────────────────────────────
         const SLIDE_DATE_VALUES = {
-            7: 1872, 8: 1950, 9: 1968,
-            11: 2006, 12: 2012, 13: 2016, 14: 2017,
-            17: 2024, 18: 2024,
-            20: 2025, 21: 2027,
-            24: 2040,
+            8: 1872, 9: 1950, 10: 1968,
+            12: 2006, 13: 2012, 14: 2016, 15: 2017,
+            18: 2024, 19: 2024,
+            21: 2025, 22: 2027,
+            25: 2040,
         };
 
         // ── Timeline events — échelle linéaire réelle ─────────────────
@@ -1051,17 +1051,17 @@
             return (year - TIMELINE_YEAR_START) / (TIMELINE_YEAR_END - TIMELINE_YEAR_START) * 100;
         }
         const TIMELINE_EVENTS = [
-            { label: '1872',  year: 1872, slideIndex: 7  },
-            { label: '1950',  year: 1950, slideIndex: 8  },
-            { label: '1968',  year: 1968, slideIndex: 9  },
-            { label: '2006',  year: 2006, slideIndex: 11 },
-            { label: '2012',  year: 2012, slideIndex: 12 },
-            { label: '2016',  year: 2016, slideIndex: 13 },
-            { label: '2017',  year: 2017, slideIndex: 14 },
-            { label: '2024',  year: 2024, slideIndex: 17 },
-            { label: '2025',  year: 2025, slideIndex: 20 },
-            { label: '2027',  year: 2027, slideIndex: 21 },
-            { label: '2040+', year: 2040, slideIndex: 24 },
+            { label: '1872',  year: 1872, slideIndex: 8  },
+            { label: '1950',  year: 1950, slideIndex: 9  },
+            { label: '1968',  year: 1968, slideIndex: 10 },
+            { label: '2006',  year: 2006, slideIndex: 12 },
+            { label: '2012',  year: 2012, slideIndex: 13 },
+            { label: '2016',  year: 2016, slideIndex: 14 },
+            { label: '2017',  year: 2017, slideIndex: 15 },
+            { label: '2024',  year: 2024, slideIndex: 18 },
+            { label: '2025',  year: 2025, slideIndex: 21 },
+            { label: '2027',  year: 2027, slideIndex: 22 },
+            { label: '2040+', year: 2040, slideIndex: 25 },
         ];
 
         // ── État ──────────────────────────────────────────────────────
@@ -1380,7 +1380,7 @@
                 const start = performance.now();
                 function tick(now) {
                     const t = Math.min((now - start) / duration, 1);
-                    const eased = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+                    const eased = t * t * t;
                     element.textContent = Math.round(fromVal + range * eased);
                     if (t < 1) requestAnimationFrame(tick);
                     else { element.textContent = toVal; resolve(); }
@@ -1466,7 +1466,7 @@
 
                 const statValue  = nextSlide.querySelector('[data-date-stat] .stat-value');
                 const sameYear   = (effectiveFrom ?? toDateVal) === toDateVal;
-                const animDur    = isDateIntro ? 800 : 600;
+                const animDur    = isDateIntro ? 1800 : 1200;
 
                 setTimeout(() => {
                     if (!sameYear && statValue) {
@@ -1857,6 +1857,19 @@
         function closeLightboxOnBackdrop(event) {
             if (event.target.id === 'lightbox-overlay') closeLightbox();
         }
+
+        // ── Auto-play/pause video on slide enter/leave ────────────────
+        document.addEventListener('slidechange', () => {
+            document.querySelectorAll('.slide video[data-autoplay]').forEach(v => {
+                const slide = v.closest('.slide');
+                if (slide && slide.classList.contains('active')) {
+                    v.play().catch(() => {});
+                } else {
+                    v.pause();
+                    v.currentTime = 0;
+                }
+            });
+        });
 
         // ── Init ──────────────────────────────────────────────────────
         window.onload = loadSlides;
